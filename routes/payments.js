@@ -9,7 +9,7 @@ const router = require("express").Router();
 router.post("/request", VerifyToken, async (req, res) => {
   try {
     const user = await Users.findOne({ _id: req.body.userId });
-    if (req.body.type === 2 && user?.balance <= req.body.amount) {
+    if (req.body.type === 2 && user?.balance < req.body.amount) {
       res.status(404).json("Users Does not have enough balance to withdraw");
       return;
     }
@@ -40,23 +40,36 @@ router.get("/pendings", VerifyToken, async (req, res) => {
 });
 
 // Accept payments here -----------------------------------------------------------
-
 router.post("/actions/:id", VerifyTokenAndAdmin, async (req, res) => {
   try {
     if (req.body.action === "accept") {
-      const paymentRes = await Payments.findByIdAndUpdate(
-        req.params.id,
-        { status: 2 },
-        { new: true }
-      );
+      const Payment = await Payments.findById(req.params.id);
+      const user = await Users.findOne({ _id: Payment?.userId });
 
-      await UpdateUserBalance(
-        paymentRes.type,
-        paymentRes.userId,
-        Number(paymentRes.amount)
-      );
-
-      res.status(200).json("Payment Accepted");
+      if (Payment?.type === 2) {
+        if (user?.balance >= Number(Payment.amount)) {
+          await Payment.updateOne({ status: 2 });
+          await UpdateUserBalance(
+            Payment.type,
+            Payment.userId,
+            Number(Payment.amount)
+          );
+          res.status(200).json("Payment Accepted");
+          return;
+        } else {
+          res.status(500).json("User Does not have enough funds");
+          return;
+        }
+      } else if (Payment?.type === 1) {
+        await Payment.updateOne({ status: 2 });
+        await UpdateUserBalance(
+          Payment.type,
+          Payment.userId,
+          Number(Payment.amount)
+        );
+        res.status(200).json("Payment Accepted");
+        return;
+      }
     } else if (req.body.action === "reject") {
       await Payments.findByIdAndUpdate(
         req.params.id,
@@ -103,6 +116,37 @@ router.get("/users/:id", VerifyToken, async (req, res) => {
       { _id: -1 }
     );
     res.status(200).json(transactionInfo);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// Delete a payment transaction --------------------------------
+router.delete("/:id", VerifyTokenAndAdmin, async (req, res) => {
+  try {
+    await Payments.findByIdAndDelete(req.params.id);
+    res.status(200).json("Payment Deleted Successfully");
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// Undo a Payment Transaction --------------------------------
+router.put("/undo/:id", VerifyTokenAndAdmin, async (req, res) => {
+  try {
+    const paymentRes = await Payments.findByIdAndUpdate(req.params.id, {
+      status: 1,
+    });
+
+    if (paymentRes?.status === 2) {
+      await UpdateUserBalance(
+        paymentRes.type === 1 ? 2 : 1,
+        paymentRes.userId,
+        Number(paymentRes.amount)
+      );
+    }
+
+    res.status(200).json("Request Done");
   } catch (error) {
     res.status(500).json(error);
   }

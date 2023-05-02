@@ -30,6 +30,15 @@ app.use("/api/wallets", walletsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/bids", bidsRouter);
 app.use("/uploads", express.static("uploads"));
+app.use("/awake", (req, res) => {
+  res.status(200).json("A wake");
+});
+
+// KEEP IT AWAKE ----------------------------------------
+
+setInterval(() => {
+  console.log("Working");
+}, 120000);
 
 // ------------------------------------ PORT LISTNER  --------------------------------
 app.listen(process.env.PORT, () => {

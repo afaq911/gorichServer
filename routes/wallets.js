@@ -43,7 +43,18 @@ router.put("/status/:id", VerifyTokenAndAdmin, async (req, res) => {
     } else {
       await wallet.updateOne({ status: true });
     }
-    res.status(200).json("Status Updated");
+    res.status(200).json("Wallet Updated");
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// Delete Wallet -------------------------------------
+
+router.delete("/:id", VerifyTokenAndAdmin, async (req, res) => {
+  try {
+    await Wallets.findByIdAndDelete(req.params.id);
+    res.status(200).json("Wallet Deleted");
   } catch (error) {
     res.status(500).json(error);
   }
