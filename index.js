@@ -18,6 +18,7 @@ const productsRouter = require("./routes/products");
 const walletsRouter = require("./routes/wallets");
 const paymentsRouter = require("./routes/payments");
 const bidsRouter = require("./routes/bids");
+const statsRouter = require("./routes/stats");
 const uploadsRouter = require("./routes/uploads");
 
 // ---------------------------------- Api Routes --------------------------------
@@ -29,6 +30,7 @@ app.use("/api/products", productsRouter);
 app.use("/api/wallets", walletsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/bids", bidsRouter);
+app.use("/api/stats", statsRouter);
 app.use("/uploads", express.static("uploads"));
 app.use("/awake", (req, res) => {
   res.status(200).json("A wake");

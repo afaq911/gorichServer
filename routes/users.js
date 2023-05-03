@@ -1,5 +1,9 @@
 const Users = require("../models/Users");
-const { VerifyToken, VerifyTokenAndAuth } = require("./VerifyToken");
+const {
+  VerifyToken,
+  VerifyTokenAndAuth,
+  VerifyTokenAndAdmin,
+} = require("./VerifyToken");
 const router = require("express").Router();
 const CryptoJs = require("crypto-js");
 
@@ -19,8 +23,15 @@ router.get("/", async (req, res) => {
 router.get("/single/:id", VerifyToken, async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);
-    const { password, ...others } = user?._doc;
-    res.status(200).json(others);
+
+    if (user?.isActive) {
+      const { password, ...others } = user?._doc;
+      res.status(200).json(others);
+      return;
+    } else {
+      res.status(404).json("Account is not active");
+      return;
+    }
   } catch (error) {
     res.status(500).json(error);
   }
@@ -85,6 +96,25 @@ router.put("/update/password/:id", async (req, res) => {
     } else {
       await user.updateOne({ password: data?.newpassword });
       res.status(200).json("Password updated successfully");
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// ---------------------------- Activate or Deactivate a user ----------------
+
+router.post("/actions/:id", VerifyTokenAndAdmin, async (req, res) => {
+  try {
+    const user = await Users.findOne({ _id: req.params.id });
+    if (user.isActive === true) {
+      await user.updateOne({ isActive: false });
+      res.status(200).json("User Deactivated");
+      return;
+    } else {
+      await user.updateOne({ isActive: true });
+      res.status(200).json("User Activated");
+      return;
     }
   } catch (error) {
     res.status(500).json(error);

@@ -50,6 +50,11 @@ router.post("/login", async (req, res) => {
       return;
     }
 
+    if (isUser && !isUser?.isActive) {
+      res.status(404).json("Your account is currently inactive");
+      return;
+    }
+
     const DecreptedPassword = CryptoJs.AES.decrypt(
       isUser?.password,
       process.env.CRYPTO_SECRET
