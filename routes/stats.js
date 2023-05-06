@@ -11,7 +11,7 @@ const router = require("express").Router();
 router.get("/total", VerifyTokenAndAdmin, async (req, res) => {
   try {
     const totalPayment = await Payments.aggregate([
-      { $match: { type: 1 } },
+      { $match: { type: 1, status: 2 } },
       { $addFields: { amount: { $toDouble: "$amount" } } },
       {
         $group: {

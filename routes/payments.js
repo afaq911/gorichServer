@@ -17,6 +17,14 @@ router.post("/request", VerifyToken, async (req, res) => {
     const newPayment = new Payments(req.body);
     const savedPayment = await newPayment.save();
 
+    if (req.body.type === 2) {
+      await UpdateUserBalance(
+        req.body.type,
+        req.body.userId,
+        Number(req.body.amount)
+      );
+    }
+
     res.status(200).json({
       data: savedPayment,
       message: `${
@@ -32,7 +40,7 @@ router.post("/request", VerifyToken, async (req, res) => {
 
 router.get("/pendings", VerifyToken, async (req, res) => {
   try {
-    const payments = await Payments.find({ status: 1 });
+    const payments = await Payments.find({ status: 1 }).sort({ _id: -1 });
     res.status(200).json(payments);
   } catch (error) {
     res.status(500).json(error);
@@ -42,24 +50,13 @@ router.get("/pendings", VerifyToken, async (req, res) => {
 // Accept payments here -----------------------------------------------------------
 router.post("/actions/:id", VerifyTokenAndAdmin, async (req, res) => {
   try {
-    if (req.body.action === "accept") {
-      const Payment = await Payments.findById(req.params.id);
-      const user = await Users.findOne({ _id: Payment?.userId });
+    const Payment = await Payments.findById(req.params.id);
 
+    if (req.body.action === "accept") {
       if (Payment?.type === 2) {
-        if (user?.balance >= Number(Payment.amount)) {
-          await Payment.updateOne({ status: 2 });
-          await UpdateUserBalance(
-            Payment.type,
-            Payment.userId,
-            Number(Payment.amount)
-          );
-          res.status(200).json("Payment Accepted");
-          return;
-        } else {
-          res.status(500).json("User Does not have enough funds");
-          return;
-        }
+        await Payment.updateOne({ status: 2 });
+        res.status(200).json({ data: 1, message: "Withdraw Payment Accepted" });
+        return;
       } else if (Payment?.type === 1) {
         await Payment.updateOne({ status: 2 });
         await UpdateUserBalance(
@@ -67,17 +64,15 @@ router.post("/actions/:id", VerifyTokenAndAdmin, async (req, res) => {
           Payment.userId,
           Number(Payment.amount)
         );
-        res.status(200).json("Payment Accepted");
+        res.status(200).json({ data: 2, message: "Deposit Payment Accepted" });
         return;
       }
     } else if (req.body.action === "reject") {
-      await Payments.findByIdAndUpdate(
-        req.params.id,
-        { status: 3 },
-        { new: true }
-      );
-
-      res.status(200).json("Payment Rejected");
+      await Payment.updateOne({ status: 3 });
+      if (Payment.type === 2) {
+        await UpdateUserBalance(1, Payment.userId, Number(Payment.amount));
+      }
+      res.status(200).json({ data: 3, message: "Payment Rejected" });
     } else {
       res.status(404).json("Payment Not Found");
     }
@@ -138,15 +133,18 @@ router.put("/undo/:id", VerifyTokenAndAdmin, async (req, res) => {
       status: 1,
     });
 
-    if (paymentRes?.status === 2) {
-      await UpdateUserBalance(
-        paymentRes.type === 1 ? 2 : 1,
-        paymentRes.userId,
-        Number(paymentRes.amount)
-      );
+    if (paymentRes?.status === 2 && paymentRes?.type === 1) {
+      await UpdateUserBalance(2, paymentRes.userId, Number(paymentRes.amount));
+      res.status(200).json("Request Done");
+      return;
+    } else if (paymentRes?.status === 3 && paymentRes?.type === 2) {
+      await UpdateUserBalance(2, paymentRes.userId, Number(paymentRes.amount));
+      res.status(200).json("Request Done");
+      return;
+    } else {
+      res.status(200).json("No Request Found");
+      return;
     }
-
-    res.status(200).json("Request Done");
   } catch (error) {
     res.status(500).json(error);
   }
