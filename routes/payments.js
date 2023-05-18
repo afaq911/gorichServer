@@ -1,6 +1,7 @@
 const Payments = require("../models/Payments");
 const Users = require("../models/Users");
 const UpdateUserBalance = require("../utils/UpdateUserBalance");
+const { paymentsPendingData } = require("../utils/paymentsdata");
 const { VerifyToken, VerifyTokenAndAdmin } = require("./VerifyToken");
 const router = require("express").Router();
 
@@ -40,9 +41,43 @@ router.post("/request", VerifyToken, async (req, res) => {
 
 router.get("/pendings", VerifyToken, async (req, res) => {
   try {
-    const payments = await Payments.find({ status: 1 }).sort({ _id: -1 });
-    res.status(200).json(payments);
+    const type = req.query.type;
+    const page = req.query.page;
+    const limit = req.query.limit;
+    let allpendingpays;
+
+    if (Number(type)) {
+      allpendingpays = await Payments.find({ status: 1, type: type }).sort({
+        _id: -1,
+      });
+    } else {
+      allpendingpays = await Payments.find({ status: 1 }).sort({ _id: -1 });
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    let results = {};
+    results.total = allpendingpays.length;
+    results.pageCount = Math.ceil(allpendingpays.length / limit);
+
+    if (endIndex < allpendingpays.length) {
+      results.next = {
+        page: page + 1,
+      };
+    }
+
+    if (startIndex > 0) {
+      results.prev = {
+        page: page - 1,
+      };
+    }
+
+    results.result = allpendingpays.slice(startIndex, endIndex);
+
+    res.status(200).json(results);
   } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 });
@@ -83,9 +118,23 @@ router.post("/actions/:id", VerifyTokenAndAdmin, async (req, res) => {
 
 // get all transcations fro admin to check ---------------------------------------
 
+const FilterData = (data, search) => {
+  return data?.filter(
+    (item) =>
+      item?.accountno?.includes(search) ||
+      item?.amount?.includes(search) ||
+      item?.userInfo[0]?.fullname?.toLowerCase()?.includes(search)
+  );
+};
+
 router.get("/transactions", VerifyTokenAndAdmin, async (req, res) => {
   try {
-    const transaction = await Payments.aggregate([
+    const search = req.query.search?.toLocaleLowerCase();
+    const page = req.query.page;
+    const limit = req.query.limit;
+    let allpendingpays;
+
+    allpendingpays = await Payments.aggregate([
       { $match: { status: { $ne: 1 } } },
       {
         $lookup: {
@@ -96,7 +145,33 @@ router.get("/transactions", VerifyTokenAndAdmin, async (req, res) => {
         },
       },
     ]).sort({ _id: -1 });
-    res.status(200).json(transaction);
+
+    if (search) {
+      allpendingpays = FilterData(allpendingpays, search);
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    let results = {};
+    results.total = allpendingpays.length;
+    results.pageCount = Math.ceil(allpendingpays.length / limit);
+
+    if (endIndex < allpendingpays.length) {
+      results.next = {
+        page: page + 1,
+      };
+    }
+
+    if (startIndex > 0) {
+      results.prev = {
+        page: page - 1,
+      };
+    }
+
+    results.result = allpendingpays.slice(startIndex, endIndex);
+
+    res.status(200).json(results);
   } catch (error) {
     console.log(error);
     res.status(500).json(error);

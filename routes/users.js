@@ -1,4 +1,5 @@
 const Users = require("../models/Users");
+const usersData = require("../utils/dummydata");
 const {
   VerifyToken,
   VerifyTokenAndAuth,
@@ -7,13 +8,57 @@ const {
 const router = require("express").Router();
 const CryptoJs = require("crypto-js");
 
+// Filter User Here -------------------------------------------------
+
+const FilterUsers = (data, search) => {
+  return data?.filter(
+    (user) =>
+      user?.fullname.toLocaleLowerCase().includes(search.toLocaleLowerCase()) ||
+      user?.email.toLocaleLowerCase()?.includes(search.toLocaleLowerCase()) ||
+      user?.mobileno.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+  );
+};
+
 // ------------------------------------- Get All Users Here ---------------------------------
 
-router.get("/", async (req, res) => {
+router.get("/", VerifyTokenAndAdmin, async (req, res) => {
   try {
-    const users = await Users.find();
-    res.status(200).json(users);
+    const search = req.query.search?.toLocaleLowerCase();
+    let allusers;
+    if (search) {
+      const getusers = await Users.find();
+      allusers = FilterUsers(getusers, search);
+    } else {
+      allusers = await Users.find();
+    }
+
+    const page = req.query.page;
+    const limit = req.query.limit;
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    let results = {};
+    results.total = allusers.length;
+    results.pageCount = Math.ceil(allusers.length / limit);
+
+    if (endIndex < allusers.length) {
+      results.next = {
+        page: page + 1,
+      };
+    }
+
+    if (startIndex > 0) {
+      results.prev = {
+        page: page - 1,
+      };
+    }
+
+    results.result = allusers.slice(startIndex, endIndex);
+
+    res.status(200).json(results);
   } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 });

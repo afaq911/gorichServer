@@ -69,4 +69,38 @@ router.get("/single/:id", VerifyToken, async (req, res) => {
   }
 });
 
+// Get Paginated user data Data --------------------------------------------
+
+router.get("/paginate", VerifyTokenAndAdmin, async (req, res) => {
+  try {
+    const allproducts = await Products.find();
+    const page = req.query.page;
+    const limit = req.query.limit;
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    let results = {};
+    results.total = allproducts.length;
+    results.pageCount = Math.ceil(allproducts.length / limit);
+
+    if (endIndex < allproducts.length) {
+      results.next = {
+        page: page + 1,
+      };
+    }
+
+    if (startIndex > 0) {
+      results.prev = {
+        page: page - 1,
+      };
+    }
+
+    results.result = allproducts.slice(startIndex, endIndex);
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 module.exports = router;
