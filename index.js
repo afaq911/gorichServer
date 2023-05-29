@@ -21,6 +21,7 @@ const paymentsRouter = require("./routes/payments");
 const bidsRouter = require("./routes/bids");
 const notificationsRouter = require("./routes/notifications");
 const statsRouter = require("./routes/stats");
+const reportsRouter = require("./routes/reports");
 const uploadsRouter = require("./routes/uploads");
 
 // ---------------------------------- Api Routes --------------------------------
@@ -34,6 +35,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/bids", bidsRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/reports", reportsRouter);
 app.use("/uploads", express.static("uploads"));
 app.use("/awake", (req, res) => {
   res.status(200).json("A wake");

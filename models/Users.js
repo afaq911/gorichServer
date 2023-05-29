@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema(
     accountno: { type: String },
     mobileno: { type: String, required: true },
     email: { type: String, required: true },
+    country: { type: String, required: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },

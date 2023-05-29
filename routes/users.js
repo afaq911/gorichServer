@@ -13,9 +13,14 @@ const CryptoJs = require("crypto-js");
 const FilterUsers = (data, search) => {
   return data?.filter(
     (user) =>
-      user?.fullname.toLocaleLowerCase().includes(search.toLocaleLowerCase()) ||
-      user?.email.toLocaleLowerCase()?.includes(search.toLocaleLowerCase()) ||
-      user?.mobileno.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+      user?.fullname
+        ?.toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()) ||
+      user?.email?.toLocaleLowerCase()?.includes(search.toLocaleLowerCase()) ||
+      user?.mobileno
+        ?.toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()) ||
+      user?._id?.toString() === search.toLocaleLowerCase()
   );
 };
 
